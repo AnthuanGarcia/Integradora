@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -90,7 +91,6 @@ func Create(user *model.User) (primitive.ObjectID, int, error) {
 
 // VerifyUser - Verifica la existencia de un usuario en la base de datos
 func VerifyUser(IDGoogle string) (primitive.ObjectID, error) {
-	var exists []bson.M
 	var user model.User
 
 	client, ctx, cancel := getConnection()
@@ -100,21 +100,11 @@ func VerifyUser(IDGoogle string) (primitive.ObjectID, error) {
 
 	db := client.Database(dataBase)
 	collection := db.Collection(collection)
-	result, err := collection.Find(ctx, bson.M{"idgoogle": IDGoogle})
+	result := collection.FindOne(ctx, bson.M{"idgoogle": IDGoogle})
 
-	if err != nil {
-		log.Printf("Error al buscar el documento: %v\n", err)
-		return primitive.NilObjectID, err
-	}
-
-	if err := result.All(ctx, &exists); err != nil {
-		log.Printf("Error al filtrar el documento: %v\n", err)
-		return primitive.NilObjectID, err
-	}
-
-	if len(exists) < 1 {
-		log.Printf("Documento inexistente\n")
-		return primitive.NilObjectID, nil
+	if result == nil {
+		log.Printf("Error al buscar el documento\n")
+		return primitive.NilObjectID, errors.New("Documento no encontrado")
 	}
 
 	if err := result.Decode(&user); err != nil {
@@ -125,6 +115,35 @@ func VerifyUser(IDGoogle string) (primitive.ObjectID, error) {
 	return user.ID, nil
 }
 
-func GetUserDevices(ID string) {
+// GetUserDevices - Obtiene todos los dispostivos del usuario
+func GetUserDevices(ID string) (*model.User, error) {
+	var user model.User
 
+	client, ctx, cancel := getConnection()
+
+	defer cancel()
+	defer client.Disconnect(ctx)
+
+	db := client.Database(dataBase)
+	collection := db.Collection(collection)
+
+	id, err := primitive.ObjectIDFromHex(ID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	result := collection.FindOne(ctx, bson.M{"id": id})
+
+	if result == nil {
+		log.Printf("Error al buscar el documento\n")
+		return nil, errors.New("Documento no encontrado")
+	}
+
+	if err := result.Decode(&user); err != nil {
+		log.Printf("Fallo al decodificar %v\n", err)
+		return nil, err
+	}
+
+	return &user, nil
 }

@@ -18,5 +18,5 @@ type Device struct {
 	Name     string `json:"name"`
 	Protocol uint8  `json:"protocol"`
 	Addr     uint16 `json:"addr"`
-	Tvs      []tv   `json:"tv"`
+	tv       `json:"tv"`
 }

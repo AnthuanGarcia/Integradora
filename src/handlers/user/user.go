@@ -3,6 +3,7 @@ package user
 import (
 	"log"
 	"net/http"
+	"strings"
 
 	db "github.com/AnthuanGarcia/Integradora/db"
 	model "github.com/AnthuanGarcia/Integradora/src/models"
@@ -14,7 +15,7 @@ import (
 var httpClient = &http.Client{}
 
 type userInfo struct {
-	IDToken string `json:"userinfo"`
+	IDToken string `json:"idtoken"`
 }
 
 func verifyIDToken(idToken string) (*oauth2.Tokeninfo, error) {
@@ -65,7 +66,15 @@ func HandleCreateUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"id": id})
+	idstr, err := id.MarshalJSON()
+
+	if err != nil {
+		log.Printf("Error al codificar el id a JSON %v\n", err)
+		c.JSON(http.StatusConflict, gin.H{"msg": err})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"id": string(idstr)})
 }
 
 // HandleSignInUser - Acceso de un usuario a traves de su cuenta de Google
@@ -92,5 +101,30 @@ func HandleSignInUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"id": exists})
+	idstr, err := exists.MarshalJSON()
+
+	if err != nil {
+		log.Printf("Error al codificar el id a JSON %v\n", err)
+		c.JSON(http.StatusConflict, gin.H{"msg": err})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"id": string(idstr)})
+}
+
+// HandleGetDevices - Obtiene todos los dispostivos almacenados de un usuario
+func HandleGetDevices(c *gin.Context) {
+	id := strings.Replace(c.Param("id"), `"`, "", -1)
+	data, err := db.GetUserDevices(id)
+
+	if err != nil {
+		log.Printf("Error al cargar dispositivos: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"msg": "Error al cargar dispositivos"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"devices":   data.Devices,
+		"favorites": data.Favorites,
+	})
 }
