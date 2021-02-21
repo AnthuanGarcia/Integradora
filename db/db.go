@@ -115,8 +115,8 @@ func VerifyUser(IDGoogle string) (primitive.ObjectID, error) {
 	return user.ID, nil
 }
 
-// GetUserDevices - Obtiene todos los dispostivos del usuario
-func GetUserDevices(ID string) (*model.User, error) {
+// GetUserInfo - Obtiene todos los datos del usuario
+func GetUserInfo(ID string) (*model.User, error) {
 	var user model.User
 
 	client, ctx, cancel := getConnection()
@@ -146,4 +146,30 @@ func GetUserDevices(ID string) (*model.User, error) {
 	}
 
 	return &user, nil
+}
+
+// UpdateUserInfo - Actualiza la informacion del Usuario
+func UpdateUserInfo(user *model.User) error {
+	client, ctx, cancel := getConnection()
+
+	defer cancel()
+	defer client.Disconnect(ctx)
+
+	db := client.Database(dataBase)
+	collection := db.Collection(collection)
+
+	res, err := collection.UpdateOne(
+		ctx,
+		bson.M{"id": user.ID},
+		bson.M{"$set": user},
+	)
+
+	if err != nil {
+		log.Printf("Fallo al Actualizar documento: %v\n", err)
+		return err
+	}
+
+	log.Printf("Documento %v actualizado\n", res.ModifiedCount)
+
+	return nil
 }

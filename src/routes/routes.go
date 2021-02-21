@@ -16,7 +16,8 @@ func (c Routes) StartGin() {
 	{
 		api.POST("/login", handleUser.HandleCreateUser)
 		api.POST("/sigin", handleUser.HandleSignInUser)
-		api.GET("/user/:id", handleUser.HandleGetDevices)
+		api.GET("/user/:id", handleUser.HandleGetUserInfo)
+		api.POST("/user/:id/newDevice/:name", handleUser.HandleNewDevice)
 	}
 
 	r.Run("0.0.0.0:3000")
