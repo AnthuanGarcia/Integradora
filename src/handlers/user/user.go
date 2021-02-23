@@ -16,6 +16,8 @@ import (
 
 var httpClient = &http.Client{}
 
+//var ultraDevice = new(model.Device)
+
 type userInfo struct {
 	IDToken string `json:"idtoken"`
 }
@@ -52,7 +54,7 @@ func HandleCreateUser(c *gin.Context) {
 	newUser := model.User{
 		ID:        primitive.NilObjectID,
 		IDGoogle:  userinfo.UserId,
-		Devices:   []model.Device{},
+		Devices:   map[string]interface{}{},
 		Favorites: []uint16{},
 	}
 
@@ -117,7 +119,7 @@ func HandleSignInUser(c *gin.Context) {
 
 // HandleGetUserInfo - Obtiene todos los dispostivos almacenados de un usuario
 func HandleGetUserInfo(c *gin.Context) {
-	id := strings.Replace(c.Param("id"), `"`, "", -1)
+	id := strings.ReplaceAll(c.Param("id"), `"`, "")
 	data, err := db.GetUserInfo(id)
 
 	if err != nil {
@@ -132,59 +134,44 @@ func HandleGetUserInfo(c *gin.Context) {
 	})
 }
 
-// Feedback - Mensajes de retroalimentacion para el cliente
-func Feedback(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"success": 1})
+// HandleNewCommand - Mensajes de retroalimentacion para el cliente
+func HandleNewCommand(c *gin.Context) {
+	action := new(model.Action)
+
+	if err := c.BindJSON(action); err != nil {
+		log.Printf("Error al deserializar action: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"msg": "Error deserealizar"})
+		return
+	}
+
+	devAction, err := json.Marshal(action)
+
+	if err != nil {
+		log.Printf("Error al deserializar action(bytes): %v\n", err)
+		c.JSON(http.StatusConflict, gin.H{"msg": "Error deserealizar"})
+		return
+	}
+
+	deviceData, err := arduino.CaptureCommand(devAction)
+
+	if err != nil {
+		log.Printf("Error al capturar datos: %v\n", err)
+		c.JSON(http.StatusConflict, gin.H{"msg": "Error deserealizar"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"info": deviceData})
 }
 
 // HandleNewDevice - Agrega un nuevo dispositvo al usuario
 func HandleNewDevice(c *gin.Context) {
 
-	var device interface{}
+	//var device interface{}
+	var newDevice interface{}
+	var arrDevice interface{}
 
 	id := strings.Replace(c.Param("id"), `"`, "", -1)
-	name := strings.Replace(c.Param("name"), `"`, "", -1)
-
-	reqType := new(model.DeviceType) // Este se tiene que recibir desde el cliente
-
-	if err := c.BindJSON(reqType); err != nil {
-		log.Printf("Error al deserializar: %v\n", err)
-		c.JSON(http.StatusBadRequest, gin.H{"msg": "Error deserealizar"})
-		return
-	}
-
-	bytesType, err := json.Marshal(&reqType)
-
-	if err != nil {
-		log.Printf("%v\n", err)
-		return
-	}
-
-	deviceData, err := arduino.CaptureCommands(bytesType)
-
-	if err != nil {
-		log.Printf("Error al capturar dispositivo: %v\n", err)
-		c.JSON(http.StatusBadRequest, gin.H{"msg": "Error al capturar dispositivo"})
-		return
-	}
-
-	n := len(deviceData.Command) - 1
-
-	// Cada Numero corresponde a un dispositivo
-	switch reqType.DevType {
-	case 1: // 1 Para Tv
-		device = model.Tv{
-			OnOff:   deviceData.Command[n],
-			VolUp:   deviceData.Command[n-1],
-			VolDown: deviceData.Command[n-2],
-			ChaUp:   deviceData.Command[n-3],
-			ChaDown: deviceData.Command[n-4],
-			Numbers: deviceData.Command[:n-4],
-		}
-		// 2 para Reproductor multimedia
-		// 3 Aires acondicionados
-		// etc...
-	}
+	typeDev := c.Param("type")
 
 	userData, err := db.GetUserInfo(id)
 
@@ -194,12 +181,39 @@ func HandleNewDevice(c *gin.Context) {
 		return
 	}
 
-	userData.Devices = append(userData.Devices, model.Device{
-		Name:     name,
-		Protocol: uint8(deviceData.Protocol),
-		Addr:     deviceData.Address,
-		Tv:       device.(model.Tv),
-	})
+	switch typeDev {
+	case "Tv": // Tv
+		newDevice = model.Tv{}
+	case "MediaPlayer":
+		newDevice = model.MediaPlayer{}
+	}
+
+	if err := c.BindJSON(&newDevice); err != nil {
+		log.Printf("Error al deserializar dispositivo: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"msg": "Error deserealizar"})
+		return
+	}
+
+	_, ok := userData.Devices[typeDev]
+
+	if !ok {
+
+		arrDevice = []interface{}{}
+		userData.Devices[typeDev] = arrDevice
+
+		userData.Devices[typeDev] = append(
+			userData.Devices[typeDev].([]interface{}),
+			newDevice,
+		)
+
+	} else {
+
+		userData.Devices[typeDev] = append(
+			userData.Devices[typeDev].(primitive.A),
+			newDevice,
+		)
+
+	}
 
 	if err = db.UpdateUserInfo(userData); err != nil {
 		log.Printf("Error al actualizar documento: %v\n", err)

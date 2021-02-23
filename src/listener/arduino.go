@@ -15,8 +15,8 @@ const (
 )
 
 var (
-	ser         = new(serial.Port)
-	plsContinue = true
+	ser = new(serial.Port)
+	//plsContinue = true
 )
 
 // PreparePort - Abre el puerto serial seleccionado
@@ -34,7 +34,7 @@ func preparePort(chanPort chan *serial.Port) {
 		log.Fatal(err)
 	}
 
-	plsContinue = true
+	//plsContinue = true
 	log.Println("Abriendo Puerto")
 	time.Sleep(1600 * time.Millisecond)
 
@@ -42,15 +42,19 @@ func preparePort(chanPort chan *serial.Port) {
 }
 
 // Listen - Escucha el puerto seleccionado para recibir bytes
-func listen(chanInfo chan []byte) {
+func listen() []byte {
 
 	buffer := make([]byte, 128)
 
-	for plsContinue {
+	for {
 		data, _ := ser.Read(buffer)
 
+		log.Println(string(buffer[:data]))
+
 		if json.Valid(buffer[:data]) {
-			chanInfo <- buffer[:data]
+			return buffer[:data]
+		} else {
+			write([]byte(`{"capture":1}`))
 		}
 	}
 
@@ -69,32 +73,26 @@ func write(request []byte) {
 
 }
 
-// CaptureCommands - Captura los datos especificados
-func CaptureCommands(devtype []byte) (*model.DeviceInfo, error) {
+// CaptureCommand - Captura los datos especificados
+func CaptureCommand(action []byte) (*model.DeviceInfo, error) {
 	chanPort := make(chan *serial.Port)
-	chanInfo := make(chan []byte)
+	//chanInfo := make(chan []byte)
 
 	go preparePort(chanPort)
 
-	succesState := model.GetComm{}
+	//succesState := model.GetComm{}
 	infodevice := new(model.DeviceInfo)
 
 	ser = <-chanPort
 
 	defer ser.Close()
 
-	write(devtype)
-	go listen(chanInfo)
+	write(action)
+	//go listen(chanInfo)
 
-	for len(infodevice.Command) == 0 {
+	for infodevice.Command == 0 {
 
-		info := <-chanInfo
-
-		if err := json.Unmarshal(info, &succesState); err != nil {
-			log.Println(err)
-		} else {
-			log.Println(succesState)
-		}
+		info := listen()
 
 		if err := json.Unmarshal(info, infodevice); err != nil {
 
@@ -109,7 +107,7 @@ func CaptureCommands(devtype []byte) (*model.DeviceInfo, error) {
 
 	}
 
-	plsContinue = false
+	//plsContinue = false
 
 	return infodevice, nil
 }

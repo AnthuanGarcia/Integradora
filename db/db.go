@@ -133,7 +133,7 @@ func GetUserInfo(ID string) (*model.User, error) {
 		return nil, err
 	}
 
-	result := collection.FindOne(ctx, bson.M{"id": id})
+	result := collection.FindOne(ctx, bson.M{"_id": id})
 
 	if result == nil {
 		log.Printf("Error al buscar el documento\n")
