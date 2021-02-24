@@ -71,15 +71,7 @@ func HandleCreateUser(c *gin.Context) {
 		return
 	}
 
-	idstr, err := id.MarshalJSON()
-
-	if err != nil {
-		log.Printf("Error al codificar el id a JSON %v\n", err)
-		c.JSON(http.StatusConflict, gin.H{"msg": err})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"id": string(idstr)})
+	c.JSON(http.StatusOK, gin.H{"id": id.Hex()})
 }
 
 // HandleSignInUser - Acceso de un usuario a traves de su cuenta de Google
@@ -106,15 +98,7 @@ func HandleSignInUser(c *gin.Context) {
 		return
 	}
 
-	idstr, err := exists.MarshalJSON()
-
-	if err != nil {
-		log.Printf("Error al codificar el id a JSON %v\n", err)
-		c.JSON(http.StatusConflict, gin.H{"msg": err})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"id": string(idstr)})
+	c.JSON(http.StatusOK, gin.H{"id": exists.Hex()})
 }
 
 // HandleGetUserInfo - Obtiene todos los dispostivos almacenados de un usuario
@@ -163,6 +147,7 @@ func HandleNewCommand(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"info": deviceData})
 }
 
+// HandleSendCommand - Envia un commando en especifico
 func HandleSendCommand(c *gin.Context) {
 	capture := model.DeviceInfo{}
 
@@ -190,7 +175,7 @@ func HandleNewDevice(c *gin.Context) {
 	var newDevice interface{}
 	var arrDevice interface{}
 
-	id := strings.Replace(c.Param("id"), `"`, "", -1)
+	id := strings.ReplaceAll(c.Param("id"), `"`, "")
 	typeDev := c.Param("type")
 
 	userData, err := db.GetUserInfo(id)

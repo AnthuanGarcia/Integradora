@@ -4,7 +4,7 @@ import "go.mongodb.org/mongo-driver/bson/primitive"
 
 // User - Informacion que se almacenara del usuario
 type User struct {
-	ID        primitive.ObjectID     `json:"ID"`
+	ID        primitive.ObjectID     `json:"ID" bson:"_id"`
 	IDGoogle  string                 `json:"idGoogle"`
 	Devices   map[string]interface{} `json:"devices"`
 	Favorites []uint16               `json:"favorites"`

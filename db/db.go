@@ -160,7 +160,7 @@ func UpdateUserInfo(user *model.User) error {
 
 	res, err := collection.UpdateOne(
 		ctx,
-		bson.M{"id": user.ID},
+		bson.M{"_id": user.ID},
 		bson.M{"$set": user},
 	)
 
