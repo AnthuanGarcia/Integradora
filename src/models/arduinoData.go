@@ -14,13 +14,15 @@ type DeviceType struct {
 /* Action - Accion a realizar en el arduino,
    1 para capturar señal
    0 para enviar señal
-*/
+
 type Action struct {
-	Capture uint8 `json:"capture"`
+
 }
+*/
 
 // DeviceInfo - Datos capturados por el Arduino
 type DeviceInfo struct {
+	Capture  uint8  `json:"capture"`
 	Protocol uint16 `json:"protocol"`
 	Address  uint16 `json:"addr"`
 	Command  uint16 `json:"command"`

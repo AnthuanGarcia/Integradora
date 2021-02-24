@@ -136,7 +136,7 @@ func HandleGetUserInfo(c *gin.Context) {
 
 // HandleNewCommand - Mensajes de retroalimentacion para el cliente
 func HandleNewCommand(c *gin.Context) {
-	action := new(model.Action)
+	action := new(model.DeviceInfo)
 
 	if err := c.BindJSON(action); err != nil {
 		log.Printf("Error al deserializar action: %v\n", err)
@@ -161,6 +161,26 @@ func HandleNewCommand(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"info": deviceData})
+}
+
+func HandleSendCommand(c *gin.Context) {
+	capture := model.DeviceInfo{}
+
+	if err := c.BindJSON(&capture); err != nil {
+		log.Printf("Erro al capturar Json : \n%v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"msg": "JSON invalido"})
+		return
+	}
+
+	deviceInfo, err := json.Marshal(&capture)
+
+	if err != nil {
+		log.Printf("Error al deserializar info, en el envio: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"msg": "Error al deserializar, en el envio"})
+		return
+	}
+
+	arduino.SendCommand(deviceInfo)
 }
 
 // HandleNewDevice - Agrega un nuevo dispositvo al usuario

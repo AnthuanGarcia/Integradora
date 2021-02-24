@@ -17,6 +17,7 @@ const (
 var (
 	ser = new(serial.Port)
 	//plsContinue = true
+	chanPort = make(chan *serial.Port)
 )
 
 // PreparePort - Abre el puerto serial seleccionado
@@ -42,7 +43,7 @@ func preparePort(chanPort chan *serial.Port) {
 }
 
 // Listen - Escucha el puerto seleccionado para recibir bytes
-func listen() []byte {
+func listen(request []byte) []byte {
 
 	buffer := make([]byte, 128)
 
@@ -53,9 +54,9 @@ func listen() []byte {
 
 		if json.Valid(buffer[:data]) {
 			return buffer[:data]
-		} else {
-			write([]byte(`{"capture":1}`))
 		}
+
+		write(request)
 	}
 
 }
@@ -75,12 +76,10 @@ func write(request []byte) {
 
 // CaptureCommand - Captura los datos especificados
 func CaptureCommand(action []byte) (*model.DeviceInfo, error) {
-	chanPort := make(chan *serial.Port)
 	//chanInfo := make(chan []byte)
 
 	go preparePort(chanPort)
 
-	//succesState := model.GetComm{}
 	infodevice := new(model.DeviceInfo)
 
 	ser = <-chanPort
@@ -88,26 +87,32 @@ func CaptureCommand(action []byte) (*model.DeviceInfo, error) {
 	defer ser.Close()
 
 	write(action)
-	//go listen(chanInfo)
 
 	for infodevice.Command == 0 {
 
-		info := listen()
+		info := listen(action)
 
 		if err := json.Unmarshal(info, infodevice); err != nil {
 
 			log.Println(err)
 			return nil, err
 
-		} else {
-
-			log.Println(infodevice)
-
 		}
+
+		log.Println(infodevice)
 
 	}
 
-	//plsContinue = false
-
 	return infodevice, nil
+}
+
+// SendCommand - Envia un comando en especifico al arduino
+func SendCommand(request []byte) {
+	go preparePort(chanPort)
+
+	ser = <-chanPort
+
+	defer ser.Close()
+
+	write(request)
 }
