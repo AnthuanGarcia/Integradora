@@ -3,49 +3,36 @@ package listener
 import (
 	"encoding/json"
 	"log"
-	"time"
 
 	model "github.com/AnthuanGarcia/Integradora/src/models"
-	"github.com/tarm/serial"
+	puerto "github.com/jacobsa/go-serial/serial"
 )
 
 const (
-	serialPort = "COM3"
-	bps        = 115200
+	serialPortName = "COM3"
+	bps            = 115200
 )
 
 var (
-	ser = new(serial.Port)
-	//plsContinue = true
-	chanPort = make(chan *serial.Port)
+	options = puerto.OpenOptions{
+		PortName:        serialPortName,
+		BaudRate:        bps,
+		DataBits:        8,
+		StopBits:        1,
+		MinimumReadSize: 4,
+	}
+
+	ser, _ = puerto.Open(options)
 )
 
-// PreparePort - Abre el puerto serial seleccionado
-func preparePort(chanPort chan *serial.Port) {
-
-	c := &serial.Config{
-		Name:        serialPort,
-		Baud:        bps,
-		ReadTimeout: time.Millisecond * 5000,
-	}
-
-	s, err := serial.OpenPort(c)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	//plsContinue = true
-	log.Println("Abriendo Puerto")
-	time.Sleep(1600 * time.Millisecond)
-
-	chanPort <- s
+func reopen() {
+	ser, _ = puerto.Open(options)
 }
 
 // Listen - Escucha el puerto seleccionado para recibir bytes
 func listen(request []byte) []byte {
 
-	buffer := make([]byte, 128)
+	buffer := make([]byte, 64)
 
 	for {
 		data, _ := ser.Read(buffer)
@@ -57,13 +44,14 @@ func listen(request []byte) []byte {
 		}
 
 		write(request)
-	}
 
+	}
 }
 
 // Write - Escribe en el puerto seleccionado un conjunto de bytes
 func write(request []byte) {
 
+	//log.Println(string(request))
 	n, err := ser.Write(request)
 
 	if err != nil {
@@ -76,23 +64,30 @@ func write(request []byte) {
 
 // CaptureCommand - Captura los datos especificados
 func CaptureCommand(action []byte) (*model.DeviceInfo, error) {
-	//chanInfo := make(chan []byte)
 
-	go preparePort(chanPort)
+	ser.Close()
+	defer reopen()
 
+	port, err := puerto.Open(options)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	buffer := make([]byte, 64)
 	infodevice := new(model.DeviceInfo)
 
-	ser = <-chanPort
+	port.Write(action)
 
-	defer ser.Close()
+	for infodevice.Command == infodevice.Address {
 
-	write(action)
+		info, _ := port.Read(buffer)
 
-	for infodevice.Command == 0 {
+		if !json.Valid(buffer[:info]) {
+			port.Write(action)
+			continue
+		}
 
-		info := listen(action)
-
-		if err := json.Unmarshal(info, infodevice); err != nil {
+		if err := json.Unmarshal(buffer[:info], infodevice); err != nil {
 
 			log.Println(err)
 			return nil, err
@@ -103,16 +98,14 @@ func CaptureCommand(action []byte) (*model.DeviceInfo, error) {
 
 	}
 
+	port.Close()
+
 	return infodevice, nil
 }
 
 // SendCommand - Envia un comando en especifico al arduino
 func SendCommand(request []byte) {
-	go preparePort(chanPort)
-
-	ser = <-chanPort
-
-	defer ser.Close()
 
 	write(request)
+
 }

@@ -5,7 +5,7 @@ go 1.15
 require (
 	cloud.google.com/go v0.76.0 // indirect
 	github.com/gin-gonic/gin v1.6.3
-	github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07
+	github.com/jacobsa/go-serial v0.0.0-20180131005756-15cf729a72d4
 	go.mongodb.org/mongo-driver v1.4.6
 	go.opencensus.io v0.22.6 // indirect
 	golang.org/x/oauth2 v0.0.0-20210210192628-66670185b0cd // indirect
