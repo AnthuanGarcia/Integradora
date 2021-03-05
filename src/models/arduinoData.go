@@ -1,5 +1,13 @@
 package models
 
+// DeviceInfo - Datos capturados por el Arduino
+type DeviceInfo struct {
+	Capture  uint8  `json:"capture"`
+	Protocol uint16 `json:"protocol"`
+	Address  uint16 `json:"addr"`
+	Command  uint16 `json:"command"`
+}
+
 /* GetComm - Estructura para mensajes de feedback de Arduino
 type GetComm struct {
 	Ok int8 `json:"ok"`
@@ -19,11 +27,3 @@ type Action struct {
 
 }
 */
-
-// DeviceInfo - Datos capturados por el Arduino
-type DeviceInfo struct {
-	Capture  uint8  `json:"capture"`
-	Protocol uint16 `json:"protocol"`
-	Address  uint16 `json:"addr"`
-	Command  uint16 `json:"command"`
-}

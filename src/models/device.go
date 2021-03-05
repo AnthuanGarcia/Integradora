@@ -1,5 +1,12 @@
 package models
 
+// Device - informacion del dispositivo
+type Device struct {
+	Name     string `json:"name"`
+	Protocol uint8  `json:"protocol"`
+	Addr     uint16 `json:"addres"`
+}
+
 // Tv - Informacion de Televisiones
 type Tv struct {
 	Device  `json:"device"`
@@ -11,7 +18,7 @@ type Tv struct {
 	Numbers []uint16 `json:"numbers"`
 }
 
-// MediaPlayer - Informacion de Televisiones
+// MediaPlayer - Informacion de reproductores multimedia
 type MediaPlayer struct {
 	Device  `json:"device"`
 	OnOff   uint16 `json:"onoff"`
@@ -22,13 +29,4 @@ type MediaPlayer struct {
 	SkipR   uint16 `json:"skipr"`
 	SkipL   uint16 `json:"skipl"`
 	Eject   uint16 `json:"eject"`
-}
-
-// Device - informacion del dispositivo
-type Device struct {
-	Name     string `json:"name"`
-	Protocol uint8  `json:"protocol"`
-	Addr     uint16 `json:"addres"`
-	//Tv          `json:"tv"`
-	//MediaPlayer `json:"mediaplayer"`
 }

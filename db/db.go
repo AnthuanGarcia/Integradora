@@ -15,6 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// Variables para la conexion
 const (
 	connTimeout        = 5
 	connStringTemplate = "mongodb+srv://%s:%s@devices.pqjzn.mongodb.net/%s?retryWrites=true&w=majority"
@@ -28,10 +29,13 @@ func getConnection() (*mongo.Client, context.Context, context.CancelFunc) {
 	password := os.Getenv("MONGO_PASSWORD")
 	clusterEndPoint := os.Getenv("MONGO_ENDPOINT")
 
+	// Generamos una URI para conectarnos al cliente de Mongo
 	connectionURI := fmt.Sprintf(connStringTemplate, username, password, clusterEndPoint)
 
+	// Obtenemos un elemento del tipo context para poder realizar consultas
 	ctx, cancel := context.WithTimeout(context.Background(), connTimeout*time.Second)
 
+	// Conectamos al cliente de Mongo con la URI generada
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connectionURI))
 	if err != nil {
 		log.Panicf("Fallo al conectar al cluster %v\n", err)
@@ -44,6 +48,7 @@ func getConnection() (*mongo.Client, context.Context, context.CancelFunc) {
 
 	log.Printf("Conectado a MongoDB\n")
 
+	// Retornamos un puntero al cliente, el contexto, y una funcion para cancelar la conexion
 	return client, ctx, cancel
 }
 

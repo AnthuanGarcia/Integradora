@@ -20,6 +20,7 @@ func (c Routes) StartGin() {
 		api.POST("/newCommand", handleUser.HandleNewCommand)
 		api.POST("/user/:id/newDevice/:type", handleUser.HandleNewDevice)
 		api.POST("/sendCommand", handleUser.HandleSendCommand)
+		api.POST("/progOn", handleUser.HandleScheduleDevice)
 	}
 
 	r.Run("0.0.0.0:3000")

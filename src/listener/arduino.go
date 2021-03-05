@@ -1,8 +1,10 @@
 package listener
 
 import (
+	"context"
 	"encoding/json"
 	"log"
+	"time"
 
 	model "github.com/AnthuanGarcia/Integradora/src/models"
 	puerto "github.com/jacobsa/go-serial/serial"
@@ -51,7 +53,7 @@ func listen(request []byte) []byte {
 // Write - Escribe en el puerto seleccionado un conjunto de bytes
 func write(request []byte) {
 
-	//log.Println(string(request))
+	log.Println(string(request))
 	n, err := ser.Write(request)
 
 	if err != nil {
@@ -108,4 +110,12 @@ func SendCommand(request []byte) {
 
 	write(request)
 
+}
+
+// ScheduleCommand - Envia una peticion a Arduino en un tiempo predeterminado
+func ScheduleCommand(ctx context.Context, request [][]byte) {
+	for _, req := range request {
+		write(req)
+		time.Sleep(time.Millisecond * 500)
+	}
 }

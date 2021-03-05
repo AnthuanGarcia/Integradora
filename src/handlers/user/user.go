@@ -1,14 +1,17 @@
 package user
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	db "github.com/AnthuanGarcia/Integradora/db"
 	arduino "github.com/AnthuanGarcia/Integradora/src/listener"
 	model "github.com/AnthuanGarcia/Integradora/src/models"
+	scheduler "github.com/AnthuanGarcia/Integradora/src/utils"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"google.golang.org/api/oauth2/v2"
@@ -118,16 +121,19 @@ func HandleGetUserInfo(c *gin.Context) {
 	})
 }
 
-// HandleNewCommand - Mensajes de retroalimentacion para el cliente
+// HandleNewCommand - Captura un nuevo comando
 func HandleNewCommand(c *gin.Context) {
 	action := new(model.DeviceInfo)
 
+	// Decodificamos el JSON de la peticion, a un struct para manejarlo
 	if err := c.BindJSON(action); err != nil {
 		log.Printf("Error al deserializar action: %v\n", err)
 		c.JSON(http.StatusBadRequest, gin.H{"msg": "Error deserealizar"})
 		return
 	}
 
+	// El struct generado lo convertimos a un arrglo de bytes
+	// para que Arduino pueda leerlo
 	devAction, err := json.Marshal(action)
 
 	if err != nil {
@@ -136,6 +142,7 @@ func HandleNewCommand(c *gin.Context) {
 		return
 	}
 
+	// Pasamos el arreglo de bytes a Arduino
 	deviceData, err := arduino.CaptureCommand(devAction)
 
 	if err != nil {
@@ -144,6 +151,7 @@ func HandleNewCommand(c *gin.Context) {
 		return
 	}
 
+	// Enviamos una respuesta al cliente de que el proceso fue exitoso
 	c.JSON(http.StatusOK, gin.H{"info": deviceData})
 }
 
@@ -175,10 +183,10 @@ func HandleNewDevice(c *gin.Context) {
 	var newDevice interface{}
 	var arrDevice interface{}
 
-	id := strings.ReplaceAll(c.Param("id"), `"`, "")
+	//id := strings.ReplaceAll(c.Param("id"), `"`, "")
 	typeDev := c.Param("type")
 
-	userData, err := db.GetUserInfo(id)
+	userData, err := db.GetUserInfo(c.Param("id"))
 
 	if err != nil {
 		log.Printf("Error al obtener informacion del usuario: %v\n", err)
@@ -228,4 +236,39 @@ func HandleNewDevice(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"msg": "Dispositivo Agregado"})
 
+}
+
+// HandleScheduleDevice - Programa una fecha de encendido para una Television
+func HandleScheduleDevice(c *gin.Context) {
+	layout := "2006-01-02 15:04:05 MST"
+	dateOn := model.PowerOnDate{}
+	ctx := context.Background()
+	numbers := []int{}
+
+	if err := c.BindJSON(&dateOn); err != nil {
+		log.Printf("Error al deserializar fecha: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"err": "Error al deserializar"})
+		return
+	}
+
+	// Si no se quiere programar un canal de encendido
+	// El default es 0
+	if dateOn.Channel != 0 {
+		numbers = scheduler.SplitNumber(int(dateOn.Channel))
+	}
+
+	requests := scheduler.CommandsToBytes(&dateOn.Tv, numbers)
+
+	t, err := time.Parse(layout, dateOn.Date)
+	if err != nil {
+		log.Printf("Fecha Invalida: %v\n", err)
+		return
+	}
+
+	interval := t.Sub(time.Now())
+
+	work := scheduler.NewScheduler()
+	work.Add(ctx, arduino.ScheduleCommand, requests, interval)
+
+	c.JSON(http.StatusOK, gin.H{"msg": "Fecha programada con exito"})
 }
