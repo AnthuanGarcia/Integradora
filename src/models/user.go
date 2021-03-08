@@ -10,9 +10,15 @@ type User struct {
 	Favorites []uint16               `json:"favorites"`
 }
 
+// Fav - Envio de canales favoritos
+type Fav struct {
+	Tv
+	Channel uint16 `json:"channel"`
+}
+
 // PowerOnDate - Fecha y canal para el encendido de un dispositivo
 type PowerOnDate struct {
-	Tv      `json:"tv"`
+	Tv
 	Channel uint16 `json:"channel"`
 	Date    string `json:"date"`
 }

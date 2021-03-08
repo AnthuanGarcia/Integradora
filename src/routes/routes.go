@@ -21,6 +21,8 @@ func (c Routes) StartGin() {
 		api.POST("/user/:id/newDevice/:type", handleUser.HandleNewDevice)
 		api.POST("/sendCommand", handleUser.HandleSendCommand)
 		api.POST("/progOn", handleUser.HandleScheduleDevice)
+		api.POST("/favorite", handleUser.HandleFavorite)
+		api.PUT("/user/:id/newFavorite/:channel", handleUser.HandleNewFavorite)
 	}
 
 	r.Run("0.0.0.0:3000")

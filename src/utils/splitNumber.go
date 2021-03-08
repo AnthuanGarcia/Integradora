@@ -48,6 +48,16 @@ func CommandsToBytes(tv *model.Tv, num []int) [][]byte {
 
 	byt, _ := json.Marshal(&infoPower)
 	infoComm = append(infoComm, byt)
+	numComm := CommandsToBytesNum(tv, num)
+
+	infoComm = append(infoComm, numComm...)
+
+	return infoComm
+}
+
+// CommandsToBytesNum - Vuelve un numero de un canal en un arreglo de bytes
+func CommandsToBytesNum(tv *model.Tv, num []int) [][]byte {
+	var infoComm [][]byte
 
 	for _, n := range num {
 		infoNumber := model.DeviceInfo{

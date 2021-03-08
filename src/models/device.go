@@ -9,7 +9,7 @@ type Device struct {
 
 // Tv - Informacion de Televisiones
 type Tv struct {
-	Device  `json:"device"`
+	Device
 	OnOff   uint16   `json:"onoff"`
 	VolUp   uint16   `json:"volUp"`
 	VolDown uint16   `json:"volDown"`
@@ -20,7 +20,7 @@ type Tv struct {
 
 // MediaPlayer - Informacion de reproductores multimedia
 type MediaPlayer struct {
-	Device  `json:"device"`
+	Device
 	OnOff   uint16 `json:"onoff"`
 	VolUp   uint16 `json:"volUp"`
 	VolDown uint16 `json:"volDown"`

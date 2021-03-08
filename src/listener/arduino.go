@@ -12,7 +12,7 @@ import (
 
 const (
 	serialPortName = "COM3"
-	bps            = 115200
+	bps            = 500000
 )
 
 var (
@@ -24,8 +24,16 @@ var (
 		MinimumReadSize: 4,
 	}
 
-	ser, _ = puerto.Open(options)
+	ser, errorPort = puerto.Open(options)
 )
+
+func init() {
+
+	if errorPort != nil {
+		log.Println(errorPort)
+	}
+
+}
 
 func reopen() {
 	ser, _ = puerto.Open(options)
@@ -105,17 +113,32 @@ func CaptureCommand(action []byte) (*model.DeviceInfo, error) {
 	return infodevice, nil
 }
 
-// SendCommand - Envia un comando en especifico al arduino
+// SendCommand - Envia un comando en especifico a arduino
 func SendCommand(request []byte) {
 
 	write(request)
 
 }
 
-// ScheduleCommand - Envia una peticion a Arduino en un tiempo predeterminado
-func ScheduleCommand(ctx context.Context, request [][]byte) {
+// SendMultiCommand - Envia varios comandos en especifico a arduino
+func SendMultiCommand(request [][]byte) {
+
 	for _, req := range request {
 		write(req)
-		time.Sleep(time.Millisecond * 500)
+		time.Sleep(time.Millisecond * 1200)
+	}
+
+}
+
+// ScheduleCommand - Envia una peticion a Arduino en un tiempo predeterminado
+func ScheduleCommand(ctx context.Context, request [][]byte) {
+	// El primer elemento es la peticion para encender la TV
+	write(request[0])
+
+	time.Sleep(time.Millisecond * 16500)
+
+	for i := 1; i < len(request); i++ {
+		write(request[i])
+		time.Sleep(time.Millisecond * 1200)
 	}
 }

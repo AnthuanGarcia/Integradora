@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,7 +18,10 @@ import (
 	"google.golang.org/api/oauth2/v2"
 )
 
-var httpClient = &http.Client{}
+var (
+	work       = scheduler.NewScheduler()
+	httpClient = &http.Client{}
+)
 
 //var ultraDevice = new(model.Device)
 
@@ -240,7 +244,7 @@ func HandleNewDevice(c *gin.Context) {
 
 // HandleScheduleDevice - Programa una fecha de encendido para una Television
 func HandleScheduleDevice(c *gin.Context) {
-	layout := "2006-01-02 15:04:05 MST"
+	layout := "2006-01-02T15:04:05MST"
 	dateOn := model.PowerOnDate{}
 	ctx := context.Background()
 	numbers := []int{}
@@ -267,8 +271,48 @@ func HandleScheduleDevice(c *gin.Context) {
 
 	interval := t.Sub(time.Now())
 
-	work := scheduler.NewScheduler()
 	work.Add(ctx, arduino.ScheduleCommand, requests, interval)
 
 	c.JSON(http.StatusOK, gin.H{"msg": "Fecha programada con exito"})
+}
+
+// HandleFavorite - Cambia segun la lista de canales favoritos
+func HandleFavorite(c *gin.Context) {
+	favChan := model.Fav{}
+
+	if err := c.BindJSON(&favChan); err != nil {
+		log.Printf("Error al deserilizar canal fav: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"msg": "Error al deserializar"})
+		return
+	}
+
+	num := scheduler.SplitNumber(int(favChan.Channel))
+	favComm := scheduler.CommandsToBytesNum(&favChan.Tv, num)
+
+	arduino.SendMultiCommand(favComm)
+
+	c.JSON(http.StatusOK, gin.H{"msg": "Cambio Realizado"})
+}
+
+// HandleNewFavorite - Agrega un nuevo canal favorito al usuario
+func HandleNewFavorite(c *gin.Context) {
+
+	fav, _ := strconv.Atoi(c.Param("channel"))
+	userData, err := db.GetUserInfo(c.Param("id"))
+
+	if err != nil {
+		log.Printf("Error al obtener informacion del usuario: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"msg": "Error al obtener info del usuario"})
+		return
+	}
+
+	userData.Favorites = append(userData.Favorites, uint16(fav))
+
+	if err = db.UpdateUserInfo(userData); err != nil {
+		log.Printf("Error al actualizar documento: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"msg": "Error al actualizar doc"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"msg": "Canal Agregado"})
 }
