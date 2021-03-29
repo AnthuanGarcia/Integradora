@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	db "github.com/AnthuanGarcia/Integradora/db"
@@ -110,8 +109,8 @@ func HandleSignInUser(c *gin.Context) {
 
 // HandleGetUserInfo - Obtiene todos los dispostivos almacenados de un usuario
 func HandleGetUserInfo(c *gin.Context) {
-	id := strings.ReplaceAll(c.Param("id"), `"`, "")
-	data, err := db.GetUserInfo(id)
+	//id := strings.ReplaceAll(, `"`, "")
+	data, err := db.GetUserInfo(c.Param("id"))
 
 	if err != nil {
 		log.Printf("Error al cargar dispositivos: %v\n", err)
@@ -315,4 +314,32 @@ func HandleNewFavorite(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"msg": "Canal Agregado"})
+}
+
+func HandleRemoveFavorite(c *gin.Context) {
+
+	favs := []uint16{}
+	userData, err := db.GetUserInfo(c.Param("id"))
+
+	if err != nil {
+		log.Printf("Error al obtener info usuario (RemoveFavorite): %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"msg": "Error al obtener info usuario"})
+		return
+	}
+
+	if err := c.BindJSON(&favs); err != nil {
+		log.Printf("Error al deserilizar canales fav: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"msg": "Error al deserializar"})
+		return
+	}
+
+	userData.Favorites = favs
+
+	if err := db.UpdateUserInfo(userData); err != nil {
+		log.Printf("Error al actualizar documento: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"msg": "Error al actualizar doc"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"msg": "Canal Eliminado"})
 }
