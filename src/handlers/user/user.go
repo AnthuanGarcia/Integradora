@@ -107,6 +107,52 @@ func HandleSignInUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"id": exists.Hex()})
 }
 
+func HandleSignInGoogle(c *gin.Context) {
+	user := new(userInfo)
+
+	if err := c.BindJSON(user); err != nil {
+		log.Printf("Campo no encontrado %v\n", err)
+		return
+	}
+
+	userinfo, err := verifyIDToken(user.IDToken)
+
+	if err != nil {
+		log.Printf("Error al validar token %v\n", err)
+		return
+	}
+
+	newUser := model.User{
+		ID:        primitive.NilObjectID,
+		IDGoogle:  userinfo.UserId,
+		Devices:   map[string]interface{}{},
+		Favorites: []uint16{},
+	}
+
+	id, rep, err := db.Create(&newUser)
+
+	if err != nil {
+		log.Printf("Error al crear Usuario: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"msg": err})
+		return
+	}
+
+	if rep == 1 {
+		exists, err := db.VerifyUser(userinfo.UserId)
+
+		if err != nil {
+			log.Printf("Error al verificar el usuario %v\n", err)
+			c.JSON(http.StatusBadRequest, gin.H{"msg": err})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"id": exists.Hex()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"id": id.Hex()})
+}
+
 // HandleGetUserInfo - Obtiene todos los dispostivos almacenados de un usuario
 func HandleGetUserInfo(c *gin.Context) {
 	//id := strings.ReplaceAll(, `"`, "")
@@ -116,6 +162,24 @@ func HandleGetUserInfo(c *gin.Context) {
 		log.Printf("Error al cargar dispositivos: %v\n", err)
 		c.JSON(http.StatusBadRequest, gin.H{"msg": "Error al cargar dispositivos"})
 		return
+	}
+
+	_, ok := data.Devices["Tv"]
+
+	if !ok || data.Devices["Tv"] == nil {
+
+		arrDevice := []interface{}{}
+		data.Devices["Tv"] = arrDevice
+
+	}
+
+	_, ok = data.Devices["Media"]
+
+	if !ok || data.Devices["Tv"] == nil {
+
+		arrDevice := []interface{}{}
+		data.Devices["Media"] = arrDevice
+
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -212,7 +276,7 @@ func HandleNewDevice(c *gin.Context) {
 
 	_, ok := userData.Devices[typeDev]
 
-	if !ok {
+	if !ok || userData.Devices[typeDev] == nil {
 
 		arrDevice = []interface{}{}
 		userData.Devices[typeDev] = arrDevice
@@ -269,6 +333,8 @@ func HandleScheduleDevice(c *gin.Context) {
 	}
 
 	interval := t.Sub(time.Now())
+
+	log.Printf("%v\n", interval)
 
 	work.Add(ctx, arduino.ScheduleCommand, requests, interval)
 
@@ -342,4 +408,28 @@ func HandleRemoveFavorite(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"msg": "Canal Eliminado"})
+}
+
+func HandleRemoveDevice(c *gin.Context) {
+
+	idx, _ := strconv.Atoi(c.Param("idx"))
+	userData, err := db.GetUserInfo(c.Param("id"))
+
+	if err != nil {
+		log.Printf("Error al obtener info usuario (RemoveFavorite): %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"msg": "Error al obtener info usuario"})
+		return
+	}
+
+	typedev := c.Param("type")
+
+	userData.Devices[typedev] = scheduler.RemoveElement(userData.Devices[typedev].(primitive.A), idx)
+
+	if err := db.UpdateUserInfo(userData); err != nil {
+		log.Printf("Error al actualizar documento: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"msg": "Error al actualizar doc"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"msg": "Dispositivo Eliminado"})
 }

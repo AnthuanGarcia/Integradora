@@ -16,6 +16,7 @@ func (c Routes) StartGin() {
 	{
 		api.POST("/login", handleUser.HandleCreateUser)
 		api.POST("/sigin", handleUser.HandleSignInUser)
+		api.POST("/signinGoogle", handleUser.HandleSignInGoogle)
 		api.GET("/user/:id", handleUser.HandleGetUserInfo)
 		api.POST("/newCommand", handleUser.HandleNewCommand)
 		api.POST("/user/:id/newDevice/:type", handleUser.HandleNewDevice)
@@ -24,6 +25,7 @@ func (c Routes) StartGin() {
 		api.POST("/favorite", handleUser.HandleFavorite)
 		api.PUT("/user/:id/newFavorite/:channel", handleUser.HandleNewFavorite)
 		api.POST("/user/:id/removeFavorite", handleUser.HandleRemoveFavorite)
+		api.DELETE("user/:id/removeDevice/:type/:idx", handleUser.HandleRemoveDevice)
 	}
 
 	r.Run("0.0.0.0:3000")
